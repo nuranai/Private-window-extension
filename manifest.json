@@ -22,7 +22,7 @@
   "browser_action": {
     "browser_style": true,
     "default_title": "Private Save",
-    "default_icon": "private_save_error.png"
+    "default_icon": "images/private_save_error.png"
   },
   "commands": {
     "open_incognito": {

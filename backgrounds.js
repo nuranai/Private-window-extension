@@ -1,10 +1,10 @@
 // Used extension API
-const windows = browser.windows,
-  extension = browser.extension,
-  storage = browser.storage,
-  browserAction = browser.browserAction,
-  commands = browser.commands,
-  tabs = browser.tabs;
+const windows = browser.windows;
+const extension = browser.extension;
+const storage = browser.storage;
+const browserAction = browser.browserAction;
+const commands = browser.commands;
+const tabs = browser.tabs;
 
 let isAllowedInIncognito = false;
 
@@ -21,7 +21,7 @@ let isAllowedInIncognito = false;
  * ]
  */
 const windowTabsArray = [];
-
+const privateWindowStack = [];
 
 // icon changed based on is extension is enabled in incognito or not
 extension.isAllowedIncognitoAccess()
@@ -37,35 +37,48 @@ extension.isAllowedIncognitoAccess()
         path: 'icons/private_save_error.png'
       });
     }
-});
+  });
 
 // function that saves in windowTabsArray new tabs in incognito window
 function tabCreatedListener(tab) {
+  // if we are in incognito mode
   if (tab.incognito) {
+    console.log('created');
+    // searching for private window taht we are in 
     const isExisted = windowTabsArray.find(item => item.windowId === tab.windowId);
+    // if window existed update its tab array
     if (isExisted) {
       isExisted.tabs.push({ id: tab.id, url: tab.url });
     }
+    // if window is new update windowTabsArray
     else {
       const newObject = {
         windowId: tab.windowId,
-        tabs: [{id: tab.id, url:tab.url}]
+        tabs: [{ id: tab.id, url: tab.url }]
       }
       windowTabsArray.push(newObject);
     }
+    console.log(windowTabsArray);
   }
 }
 
 // change url of the tab
 function tabUpdateListener(tabId, changeInfo, tab) {
+  console.log('called');
+  // check if tab is in incognito and has in changeInfo argument an url property
   if (tab.incognito && changeInfo.url) {
+    // searching for private window taht we are in 
     const isExisted = windowTabsArray.find(item => item.windowId === tab.windowId);
+    // if we found tab, update it
     if (isExisted) {
-      let changedTabIndex = isExisted.tabs.findIndex(item => item.id === tabId);
+      //searching for the tab
+      const changedTabIndex = isExisted.tabs.findIndex(item => item.id === tabId);
+      // if tab is existing update its url
       if (changedTabIndex >= 0)
         isExisted.tabs[changedTabIndex].url = changeInfo.url;
+      // else add new
       else {
-        isExisted.tabs.push({id: tabId, url: changeInfo.url})
+        isExisted.tabs.push({ id: tabId, url: changeInfo.url })
       }
     }
   }
@@ -73,8 +86,11 @@ function tabUpdateListener(tabId, changeInfo, tab) {
 
 // delete tab from windowTabsArray
 function tabRemovedListener(tab) {
+  //check if we are in incognito
   if (tab.incognito) {
+    // searching for the window index
     const windowIdIndex = windowTabsArray.findIndex(item => item.windowId === tab.windowId);
+    // remove tab from the window
     if (windowIdIndex >= 0) {
       const tabIndex = windowTabsArray[windowIdIndex].tabs.findIndex(item => item.id === tab.id);
       windowTabsArray[windowIdIndex].tabs.splice(tabIndex, 1);
@@ -84,21 +100,40 @@ function tabRemovedListener(tab) {
 
 // when incognito window closes this function saves into storage its tabs
 function windowRemovedListener(windowId) {
+  // searching for window to remove from our array
   const windowObject = windowTabsArray.find(window => window.windowId === windowId);
+  // window index
+  if (!windowObject) return;
   const index = windowTabsArray.indexOf(windowObject);
-
+  // removing window from array
   windowTabsArray.splice(index, 1);
-  storage.sync.set({ "tabs": windowObject.tabs });
+  // saving tabs to storage
+  storage.sync.get(value => {
+    console.log(value.windows, windowObject);
+    if (value.windows) {
+      value.windows.push(windowObject);
+      storage.sync.set({ "windows": value.windows });
+    }
+    else {
+      storage.sync.set({ "windows": [windowObject] });
+    }
+  })
 }
 
 // open new incognito window with saved in storage tabs
-function opentSavedIncognito() {
+function openSavedIncognito() {
   storage.sync.get().then(data => {
-    const asd = data.tabs.map(item => item.url);
+    // if our stack is empty do nothing
+    if (!data.windows?.length) return;
+    // getting the urls of saved window
+    const lastWindow = data.windows.pop();
+    const urls = lastWindow.tabs.map(item => item.url);
+    // opening a new incognito window with tabs
     windows.create({
       incognito: true,
-      url:asd 
-    });
+      url: urls
+    })
+    storage.sync.set({ "windows": data.windows });
   })
 }
 
@@ -111,7 +146,7 @@ tabs.onRemoved.addListener(tabRemovedListener);
 windows.onRemoved.addListener(windowRemovedListener);
 
 // open private window on extension icon click
-browserAction.onClicked.addListener(opentSavedIncognito);
+browserAction.onClicked.addListener(openSavedIncognito);
 
 // open private window on extension short-cut
-commands.onCommand.addListener(opentSavedIncognito);
+commands.onCommand.addListener(openSavedIncognito);
