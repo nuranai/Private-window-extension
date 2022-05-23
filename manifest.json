@@ -5,8 +5,6 @@
   "manifest_version": 2,
   "incognito": "spanning",
   "permissions": [
-    "<all_urls>",
-    "activeTab",
     "tabs",
     "storage"
   ],
@@ -16,13 +14,13 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "bajanga07@gmail.com",
-      "strict_min_version": "42.0"
+      "strict_min_version": "55.0"
     }
   },
   "browser_action": {
     "browser_style": true,
     "default_title": "Private Save",
-    "default_icon": "images/private_save_error.png"
+    "default_icon": "icons/private_save_error.png"
   },
   "commands": {
     "open_incognito": {

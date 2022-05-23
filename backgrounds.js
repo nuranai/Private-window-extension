@@ -29,11 +29,21 @@ extension.isAllowedIncognitoAccess()
       browserAction.setIcon({
         path: 'icons/private_save.png'
       });
+      browserAction.setTitle({
+        title: 'Open last saved private window'
+      });
+      // tabs listeners
+      tabs.onCreated.addListener(tabCreatedListener);
+      tabs.onUpdated.addListener(tabUpdateListener);
+      tabs.onRemoved.addListener(tabRemovedListener);
     }
     // else error image
     else {
       browserAction.setIcon({
         path: 'icons/private_save_error.png'
+      });
+      browserAction.setTitle({
+        title: 'Please allow this extension to work in private window'
       });
     }
   });
@@ -67,12 +77,12 @@ function tabUpdateListener(tabId, changeInfo, tab) {
   if (tab.incognito && changeInfo.url) {
     // searching for private window taht we are in 
     const isExisted = windowTabsArray.find(item => item.windowId === tab.windowId);
-   
+
     // if we found tab, update it
     if (isExisted) {
       //searching for the tab
       const changedTabIndex = isExisted.tabs.findIndex(item => item.id === tabId);
-   
+
       // if tab is existing update its url
       if (changedTabIndex >= 0)
         isExisted.tabs[changedTabIndex].url = changeInfo.url;
@@ -133,9 +143,9 @@ function openSavedIncognito() {
 
     // getting last window
     const lastWindow = data.windows.pop();
-    
+
     // getting the urls of saved window
-    const urls = lastWindow.tabs.map(item => item.url);
+    const urls = lastWindow.tabs.map(item => item.url).filter(url => !url.match(/^about:*/));
 
     // opening a new incognito window with tabs
     windows.create({
@@ -145,11 +155,6 @@ function openSavedIncognito() {
     storage.sync.set({ "windows": data.windows });
   })
 }
-
-// tabs listeners
-tabs.onCreated.addListener(tabCreatedListener);
-tabs.onUpdated.addListener(tabUpdateListener);
-tabs.onRemoved.addListener(tabRemovedListener);
 
 // window listener
 windows.onRemoved.addListener(windowRemovedListener);
