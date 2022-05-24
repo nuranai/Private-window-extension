@@ -1,7 +1,7 @@
 {
   "name": "Private Save",
   "description": "Save a pirvate window on close",
-  "version": "1.0",
+  "version": "1.0.1",
   "manifest_version": 2,
   "incognito": "spanning",
   "permissions": [
